@@ -7,21 +7,25 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #e0f0ff;
       margin: 0;
       padding: 0;
+      background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6-9QjaclRkIdBf-sBUojYQTM0RrIIukbfU3aprvAzKu9ylexjsupZbcA&s=10');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      backdrop-filter: blur(2px);
     }
 
     .container {
-      background: #fff;
+      background: rgba(255, 255, 255, 0.95);
       padding: 40px;
       border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      max-width: 420px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      max-width: 400px;
       width: 100%;
     }
 
@@ -70,7 +74,6 @@
   <div class="container">
     <div class="section">
       <h2>Registro</h2>
-      <input type="text" id="user-reg" placeholder="Nombre de usuario">
       <input type="email" id="email-reg" placeholder="Correo electrónico">
       <input type="password" id="pass-reg" placeholder="Contraseña">
       <button onclick="registrar()">Crear cuenta</button>
@@ -88,7 +91,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAeRDhDy-CHiL9lPQVeoEKA6hVfOWqftis",
@@ -105,23 +108,11 @@
 
     // Registro
     window.registrar = function() {
-      const nombreUsuario = document.getElementById("user-reg").value;
       const email = document.getElementById("email-reg").value;
       const pass = document.getElementById("pass-reg").value;
-
-      if (!nombreUsuario) {
-        alert("Por favor, escribe un nombre de usuario.");
-        return;
-      }
-
       createUserWithEmailAndPassword(auth, email, pass)
-        .then(userCredential => {
-          // Guardar nombre de usuario en el perfil
-          updateProfile(userCredential.user, {
-            displayName: nombreUsuario
-          }).then(() => {
-            window.location.href = "inicio.html";
-          });
+        .then(() => {
+          window.location.href = "inicio.html";
         })
         .catch(error => {
           alert("Error: " + error.message);
