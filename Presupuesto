@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Finanzas Personales</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(#2c3e50, #34495e);
+      color: #fff;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h1, h2 {
+      text-align: center;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    table {
+      width: 100%;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px;
+      text-align: center;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 6px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    .balance {
+      font-size: 1.3em;
+      text-align: center;
+      background: #27ae60;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .alerta {
+      color: #e74c3c;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    canvas {
+      max-width: 500px;
+      margin: 0 auto 20px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.5);
+      transform: perspective(1000px) rotateX(10deg);
+    }
+
+    .progress-container {
+      position: relative;
+      width: 100%;
+      height: 24px;
+      background: #ccc;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(to right, #3498db, #2980b9);
+      width: 0%;
+      text-align: center;
+      color: #fff;
+      font-weight: bold;
+      line-height: 24px;
+      text-shadow: 1px 1px 2px #000;
+      transition: width 0.5s ease;
+    }
+  </style>
+</head>
+<body onload="cargarDatos()">
+
+  <h1>Finanzas Personales</h1>
+
+  <h2>Ingresos</h2>
+  <table id="ingresos">
+    <tr><th>Descripción</th><th>Cantidad</th><th>Inicio</th><th>Periodo</th><th>Progreso</th><th></th></tr>
+  </table>
+  <button onclick="agregarFila('ingresos')">+ Agregar Ingreso</button>
+
+  <h2>Gastos</h2>
+  <table id="gastos">
+    <tr><th>Descripción</th><th>Cantidad</th><th>Inicio</th><th>Periodo</th><th>Progreso</th><th></th></tr>
+  </table>
+  <button onclick="agregarFila('gastos')">+ Agregar Gasto</button>
+
+  <h2>Ahorro</h2>
+  <table id="ahorro">
+    <tr><th>Descripción</th><th>Cantidad</th><th></th></tr>
+  </table>
+  <button onclick="agregarFilaAhorro()">+ Agregar Ahorro</button>
+
+  <div class="balance" id="balance"></div>
+  <div class="alerta" id="alerta"></div>
+
+  <canvas id="grafico"></canvas>
+
+  <div style="text-align:center">
+    <button onclick="guardarDatos()">💾 Guardar</button>
+    <button onclick="reiniciar()">🗑️ Reiniciar Todo</button>
+  </div>
+
+  <script>
+    const periodos = {
+      semanal: 7,
+      quincenal: 15,
+      mensual: 30,
+      bimestral: 60
+    };
+
+    function agregarFila(tablaId, desc = "", cantidad = 0, inicio = "", periodo = "mensual") {
+      const tabla = document.getElementById(tablaId);
+      const fila = tabla.insertRow();
+      const hoy = new Date().toISOString().split("T")[0];
+      if (!inicio) inicio = hoy;
+
+      fila.innerHTML = `
+        <td><input type="text" value="${desc}" onchange="guardarDatos()"></td>
+        <td><input type="number" value="${cantidad}" oninput="calcularBalance(); guardarDatos()"></td>
+        <td><input type="date" value="${inicio}" onchange="guardarDatos()"></td>
+        <td>
+          <select onchange="guardarDatos()">
+            ${Object.keys(periodos).map(p => `<option value="${p}" ${periodo === p ? "selected" : ""}>${p[0].toUpperCase() + p.slice(1)}</option>`).join("")}
+          </select>
+        </td>
+        <td class="progress-container">
+          <div class="progress-bar">0%</div>
+        </td>
+        <td><button onclick="eliminarFila(this)">Eliminar</button></td>
+      `;
+      calcularBalance();
+      actualizarBarrasProgreso();
+    }
+
+    function agregarFilaAhorro(desc = "", cantidad = 0) {
+      const tabla = document.getElementById("ahorro");
+      const fila = tabla.insertRow();
+      fila.innerHTML = `
+        <td><input type="text" value="${desc}" onchange="guardarDatos()"></td>
+        <td><input type="number" value="${cantidad}" oninput="calcularBalance(); guardarDatos()"></td>
+        <td><button onclick="eliminarFila(this)">Eliminar</button></td>
+      `;
+      calcularBalance();
+    }
+
+    function eliminarFila(btn) {
+      btn.parentNode.parentNode.remove();
+      calcularBalance();
+      guardarDatos();
+    }
+
+    function calcularBalance() {
+      const ingresos = sumarValores("ingresos");
+      const gastos = sumarValores("gastos");
+      const ahorros = sumarValores("ahorro");
+      const balance = (ingresos + ahorros) - gastos;
+      document.getElementById("balance").textContent =
+        `Balance: $${balance.toFixed(2)} (Ingresos: $${ingresos} + Ahorros: $${ahorros} - Gastos: $${gastos})`;
+      document.getElementById("alerta").textContent =
+        balance < 0 ? "⚠️ ¡Tus gastos superan tus ingresos y ahorros!" : "";
+      actualizarGrafico(ingresos + ahorros, gastos);
+    }
+
+    function sumarValores(tablaId) {
+      const tabla = document.getElementById(tablaId);
+      let suma = 0;
+      for (let i = 1; i < tabla.rows.length; i++) {
+        const val = parseFloat(tabla.rows[i].cells[1].querySelector("input").value);
+        suma += isNaN(val) ? 0 : val;
+      }
+      return suma;
+    }
+
+    function guardarDatos() {
+      const datos = {
+        ingresos: obtenerDatos("ingresos"),
+        gastos: obtenerDatos("gastos"),
+        ahorro: obtenerDatos("ahorro")
+      };
+      localStorage.setItem("finanzas", JSON.stringify(datos));
+      calcularBalance();
+    }
+
+    function obtenerDatos(tablaId) {
+      const tabla = document.getElementById(tablaId);
+      const datos = [];
+      for (let i = 1; i < tabla.rows.length; i++) {
+        const fila = tabla.rows[i];
+        if (tablaId === "ahorro") {
+          const desc = fila.cells[0].querySelector("input").value;
+          const val = parseFloat(fila.cells[1].querySelector("input").value) || 0;
+          datos.push({ desc, val });
+        } else {
+          const desc = fila.cells[0].querySelector("input").value;
+          const val = parseFloat(fila.cells[1].querySelector("input").value) || 0;
+          const inicio = fila.cells[2].querySelector("input").value;
+          const periodo = fila.cells[3].querySelector("select").value;
+          datos.push({ desc, val, inicio, periodo });
+        }
+      }
+      return datos;
+    }
+
+    function cargarDatos() {
+      const datos = JSON.parse(localStorage.getItem("finanzas"));
+      if (!datos) return;
+      datos.ingresos.forEach(i => agregarFila("ingresos", i.desc, i.val, i.inicio, i.periodo));
+      datos.gastos.forEach(g => agregarFila("gastos", g.desc, g.val, g.inicio, g.periodo));
+      if (datos.ahorro) datos.ahorro.forEach(a => agregarFilaAhorro(a.desc, a.val));
+    }
+
+    function actualizarBarrasProgreso() {
+      ["ingresos", "gastos"].forEach(tablaId => {
+        const tabla = document.getElementById(tablaId);
+        for (let i = 1; i < tabla.rows.length; i++) {
+          const fila = tabla.rows[i];
+          const inicioStr = fila.cells[2].querySelector("input").value;
+          const periodo = fila.cells[3].querySelector("select").value;
+          const dur = periodos[periodo] || 30;
+          const valor = parseFloat(fila.cells[1].querySelector("input").value);
+          const barra = fila.querySelector(".progress-bar");
+          if (!inicioStr || !barra) continue;
+
+          const inicio = new Date(inicioStr);
+          const ahora = new Date();
+          const msPorDia = 86400000;
+          const diasTranscurridos = Math.floor((ahora - inicio) / msPorDia);
+          const ciclos = Math.floor(diasTranscurridos / dur);
+          const acumulado = Math.min(valor * (diasTranscurridos / dur), valor * 999);
+          const porcentaje = Math.min(100, (diasTranscurridos % dur) * 100 / dur);
+
+          barra.style.width = `${porcentaje}%`;
+          barra.textContent = `$${acumulado.toFixed(2)} - ${porcentaje.toFixed(0)}%`;
+        }
+      });
+    }
+
+    setInterval(actualizarBarrasProgreso, 10000); // Cada 10 segundos
+
+    let grafico;
+    function actualizarGrafico(ingresos, gastos) {
+      const ctx = document.getElementById("grafico").getContext("2d");
+      if (grafico) grafico.destroy();
+      grafico = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Ingresos + Ahorros', 'Gastos'],
+          datasets: [{
+            data: [ingresos, gastos],
+            backgroundColor: ['#3498db', '#e74c3c'],
+            hoverOffset: 30,
+            borderWidth: 5,
+            borderColor: '#ecf0f1'
+          }]
+        },
+        options: {
+          responsive: true,
+          cutout: '40%',
+          animation: { animateRotate: true, animateScale: true },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.label}: $${context.raw}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function reiniciar() {
+      if (confirm("¿Borrar todos los datos?")) {
+        localStorage.removeItem("finanzas");
+        location.reload();
+      }
+    }
+  </script>
+</body>
+</html>
