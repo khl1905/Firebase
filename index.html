@@ -2,51 +2,41 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login con Firebase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Página de Inicio</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background: #eef;
       padding: 40px;
       text-align: center;
     }
-    input, button {
-      margin: 10px;
-      padding: 10px;
-      font-size: 1rem;
-    }
     .card {
       background: white;
-      padding: 20px;
-      border-radius: 10px;
       max-width: 400px;
       margin: auto;
+      padding: 20px;
+      border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px;
+      margin-top: 20px;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Registro</h2>
-    <input type="email" id="email-reg" placeholder="Correo"><br>
-    <input type="password" id="pass-reg" placeholder="Contraseña"><br>
-    <button onclick="registrar()">Registrar</button>
-
-    <h2>Login</h2>
-    <input type="email" id="email-log" placeholder="Correo"><br>
-    <input type="password" id="pass-log" placeholder="Contraseña"><br>
-    <button onclick="login()">Iniciar sesión</button>
-
-    <h3 id="estado">Estado de sesión: no iniciada</h3>
+    <h2>Bienvenido</h2>
+    <p id="user-email">Cargando usuario...</p>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
-    // Configuración de tu proyecto Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAeRDhDy-CHiL9lPQVeoEKA6hVfOWqftis",
       authDomain: "mi-login-app-789ef.firebaseapp.com",
@@ -60,39 +50,13 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Función para registrar
-    window.registrar = function() {
-      const email = document.getElementById("email-reg").value;
-      const pass = document.getElementById("pass-reg").value;
-      createUserWithEmailAndPassword(auth, email, pass)
-        .then(userCredential => {
-          alert("Registrado correctamente");
-        })
-        .catch(error => {
-          alert("Error: " + error.message);
-        });
-    };
-
-    // Función para iniciar sesión
-    window.login = function() {
-      const email = document.getElementById("email-log").value;
-      const pass = document.getElementById("pass-log").value;
-      signInWithEmailAndPassword(auth, email, pass)
-        .then(userCredential => {
-          alert("Sesión iniciada");
-        })
-        .catch(error => {
-          alert("Error: " + error.message);
-        });
-    };
-
-    // Estado de sesión
+    // Mostrar el correo del usuario o redirigir si no está logueado
     onAuthStateChanged(auth, user => {
-      const estado = document.getElementById("estado");
       if (user) {
-        estado.textContent = "Sesión iniciada como: " + user.email;
+        document.getElementById("user-email").textContent = "Correo: " + user.email;
       } else {
-        estado.textContent = "Estado de sesión: no iniciada";
+        alert("No has iniciado sesión");
+        window.location.href = "index.html";
       }
     });
 
@@ -100,6 +64,7 @@
     window.logout = function() {
       signOut(auth).then(() => {
         alert("Sesión cerrada");
+        window.location.href = "index.html";
       });
     };
   </script>
